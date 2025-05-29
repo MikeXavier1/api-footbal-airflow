@@ -175,3 +175,4 @@ cython_debug/
 
 # Test Notebook
 notebook_test.ipynb
+draw_io
