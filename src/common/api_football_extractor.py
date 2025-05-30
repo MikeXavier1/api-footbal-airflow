@@ -2,7 +2,7 @@ import requests
 import os
 import logging
 from dotenv import load_dotenv
-from typing import Literal, Dict, Any
+from typing import Literal, Dict, Any, List
 
 # Load configs
 load_dotenv(dotenv_path="src/config/.env")
@@ -18,6 +18,9 @@ class APIFootballExtractor:
     """
     Extract class for fetch API Football data
     """
+    _ALLOWED_QUERY_PARAMS: Dict[str, List[str]] = {
+        "countries": ["name", "code", "search"],
+    }
 
     def __init__(self):
         if not all ([API_KEY, API_HOST, API_URL]):
@@ -28,6 +31,35 @@ class APIFootballExtractor:
             "x-rapidapi-host": API_HOST
         }
         logger.info("APIFootballExtractor initialized.")
+
+    def _validate_querystring_params(self, table_name: str, querystring: Dict[str, Any]):
+        """
+        Validates the provided querystring parameters against the allowed ones for the given table.
+
+        Args:
+            table_name (str): The name of the table/endpoint.
+            querystring (Dict): The dictionary of querystring parameters to validate.
+
+        Raises:
+            ValueError: If an invalid or unexpected parameter is found.
+        """
+        allowed_params = self._ALLOWED_QUERY_PARAMS.get(table_name)
+
+        if allowed_params is None:
+            raise ValueError(
+                f"Table '{table_name}' is not supported for query parameter validation."
+            )
+
+        for param_key in querystring.keys():
+            if param_key not in allowed_params:
+                error_msg = (
+                    f"Invalid querystring parameter '{param_key}' for table '{table_name}'. "
+                    f"Allowed parameters are: {', '.join(allowed_params)}"
+                )
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+        logger.debug("Querystring parameters validated successfully for table '%s'.", table_name)
+
 
 
     def extract_table(
@@ -48,6 +80,9 @@ class APIFootballExtractor:
         Raises:
             requests.exceptions.RequestException: If there's an HTTP request error.
         """
+
+        # Perform validation BEFORE making the request
+        self._validate_querystring_params(table_name, querystring)
 
         url = API_URL + table_name
 
