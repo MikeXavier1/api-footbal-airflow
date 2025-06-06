@@ -11,6 +11,10 @@ google-auth==2.29.0
 google-cloud-bigquery==3.11.4
 google-cloud-storage==2.16.0
 
+# Apache Airflow
+apache-airflow==2.8.1
+psycopg2-binary
+
 # Testing
 pytest==8.2.1
 responses==0.25.0  # For mocking requests in tests

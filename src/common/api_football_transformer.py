@@ -1,7 +1,7 @@
 import pandas as pd
 import logging
 from typing import Any, Callable, Dict, Literal, TypeVar
-from api_football_extractor import APIFootballExtractor
+from src.common.api_football_extractor import APIFootballExtractor
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -15,7 +15,8 @@ class APIFootballTransformer:
     Transform fetched data from API Football by table name.
     """
 
-    _TRANSFORM_METHODS: Dict[str, Callable[[T], pd.DataFrame]] = {}
+    # TO VERIFY:
+    # _TRANSFORM_METHODS: Dict[str, Callable[[T], pd.DataFrame]] = {}
 
     def __init__(
             self,
