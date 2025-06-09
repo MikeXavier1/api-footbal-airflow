@@ -20,6 +20,7 @@ except ImportError as error:
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Paths
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
 
@@ -37,10 +38,11 @@ except ImportError:
 except Exception as e:
     logger.warning(f"Failed to load .env file: {e}")
 
-# Load config
+# Load config variables
 GCP_RAW_BUCKET = os.getenv("GCP_RAW_BUCKET")
 GCP_CREDENTIALS_PATH = os.getenv("GCP_CREDENTIALS_PATH")
 
+# Load table upload strategies
 UPLOAD_MODES: Dict[str, str] = {}
 try:
     upload_modes_path = os.path.join(project_root, 'src', 'config', 'table_upload_modes.yml')
@@ -48,16 +50,16 @@ try:
         UPLOAD_MODES = yaml.safe_load(file)
     logger.info(f"Loaded upload modes from {upload_modes_path}: {UPLOAD_MODES}")
 except FileNotFoundError:
-    logger.critical(f"CRITICAL: table_upload_modes.yml not found at {upload_modes_path}. Cannot determine upload strategies.")
-    raise FileNotFoundError(f"Configuration file missing: {upload_modes_path}")
+    logger.critical(f"Missing config file: {upload_modes_path}")
+    raise
 except Exception as error:
-    logger.critical(f"CRITICAL: Error loading table_upload_modes.yml: {error}")
+    logger.critical(f"Error loading table_upload_modes.yml: {error}")
     raise
 
 class ETLProcessor:
     """
-    A class to encapsulate and manage various ETL processes for API Football data.
-    It reads load strategies from table_upload_modes.yml.
+    Orchestrates the ETL process for API Football tables,
+    using configuration from environment and YAML files.
     """
 
     def __init__(
@@ -65,29 +67,21 @@ class ETLProcessor:
             bucket_name: str,
             credentials_path: str
         ):
-        """
-        Initializes the ETLProcessor with Google Cloud Storage configuration.
-
-        Args:
-            bucket_name (str): The name of the GCS bucket for raw data.
-            credentials_path (str): The path to the GCP service account key file.
-        """
         self.bucket_name = bucket_name
         self.credentials_path = credentials_path
         self._validate_config()
 
     def _validate_config(self):
-        """Validates that necessary configuration parameters are set."""
         if not self.bucket_name:
-            logger.critical("GCP_RAW_BUCKET (bucket_name) is not configured in ETLProcessor.")
+            logger.critical("Missing GCP_RAW_BUCKET.")
             raise ValueError("GCP_RAW_BUCKET is not configured.")
         if not self.credentials_path or not os.path.exists(self.credentials_path):
-            logger.critical(f"GCP_CREDENTIALS_PATH (credentials_path) is not set or file not found at '{self.credentials_path}'.")
-            raise ValueError("GCP_CREDENTIALS_PATH is not configured or invalid.")
+            logger.critical(f"Invalid GCP_CREDENTIALS_PATH: {self.credentials_path}")
+            raise ValueError("GCP_CREDENTIALS_PATH is not configured or path is invalid.")
         if not UPLOAD_MODES:
-            logger.critical("UPLOAD_MODES is empty. table_upload_modes.yml might be empty or unreadable.")
-            raise ValueError("UPLOAD_MODES configuration is missing or empty.")
-        logger.info("ETLProcessor initialized and configuration validated.")
+            logger.critical("UPLOAD_MODES is empty or not loaded.")
+            raise ValueError("UPLOAD_MODES is missing.")
+        logger.info("ETLProcessor configuration validated.")
 
     def _perform_core_etl_steps(
         self,
@@ -95,28 +89,20 @@ class ETLProcessor:
         stage: Literal["raw", "processed"],
         load_strategy: Literal["overwrite", "append"],
         querystring_params: Dict[str, Any],
-        # partition_keys: Optional[Dict[str, Any]] = None,
         **context: Any
     ) -> Optional[str]:
-        """
-        Contains the core ETL logic (Extract, Transform, Load) that is shared
-        between different loading strategies.
-        """
         logger.info(f"Executing core ETL for table: '{table_name}' (Strategy: '{load_strategy}') with params: {querystring_params}")
 
-        # 1. Initialize the Transformer (which internally calls the Extractor)
         if APIFootballTransformer is None:
-            logger.critical("APIFootballTransformer class not available. Cannot perform ETL.")
-            raise RuntimeError("APIFootballTransformer not imported.")
+            raise RuntimeError("APIFootballTransformer is not imported.")
 
         try:
-            logger.info(f"Step 1: Initializing APIFootballTransformer for table '{table_name}'.")
-            transformer = APIFootballTransformer(
-                table_name=table_name,
-                **querystring_params
-            )
+            transformer = APIFootballTransformer(table_name=table_name, **querystring_params)
             transformed_df = transformer.transform()
-            logger.info(f"Transformer completed. Records found: {len(transformed_df) if not transformed_df.empty else 0}.")
+            logger.info(f"Transformed {len(transformed_df)} records for table '{table_name}'.")
+        except Exception as error:
+            logger.critical(f"Transformation error for '{table_name}': {error}", exc_info=True)
+            raise
 
         except Exception as error:
             logger.critical(f"Error during Extraction or Transformation for table '{table_name}': {error}", exc_info=True)
@@ -126,7 +112,6 @@ class ETLProcessor:
             logger.warning(f"No data returned from transformer for '{table_name}'. Skipping GCS load.")
             return None
 
-        # 2. Initialize the Loader
         if APIFootballLoader is None:
             logger.critical("APIFootballLoader class not available. Cannot perform ETL.")
             raise RuntimeError("APIFootballLoader not imported.")
@@ -148,7 +133,6 @@ class ETLProcessor:
                 df=transformed_df,
                 table_name=table_name,
                 stage=stage,
-                # partition_keys=partition_keys
             )
             logger.info(f"Data successfully loaded for '{table_name}'. GCS path: {uploaded_path}")
 
@@ -168,8 +152,6 @@ class ETLProcessor:
         table_name: str,
         stage: Literal["raw", "processed"],
         querystring_params: Dict[str, Any],
-        # partition_keys is optional, only needed for 'append' strategy
-        # partition_keys: Optional[Dict[str, Any]] = None,
         **context: Any
     ) -> Optional[str]:
         """

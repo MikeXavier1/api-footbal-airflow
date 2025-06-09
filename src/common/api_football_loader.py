@@ -23,6 +23,7 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+logger.debug("Upload modes loaded: %s", UPLOAD_MODES)
 
 class APIFootballLoader:
     """
@@ -196,6 +197,3 @@ if __name__ == "__main__":
 
     except Exception as e:
         logger.critical("An error occurred during the full ETL test: %s", e, exc_info=True)
-
-# Stage parameter
-

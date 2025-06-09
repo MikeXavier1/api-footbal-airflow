@@ -1,3 +1,8 @@
+"""
+This DAG runs on-demand ETL jobs to extract and load raw dimension tables from the API-Football service into GCP.
+It uses a dynamic task creation mechanism based on a YAML configuration (table_upload_modes.yml).
+"""
+
 from __future__ import annotations
 
 import pendulum
@@ -18,11 +23,11 @@ except ImportError as error:
     raise
 
 # --- Configuration Loading for the DAG ---
-GCP_RAW_BUCKET = Variable.get("gcs_raw_bucket", None)
-GCP_CREDENTIALS_PATH = Variable.get("gcs_credentials_path", None)
+GCP_RAW_BUCKET = os.getenv("GCP_RAW_BUCKET")
+GCP_CREDENTIALS_PATH = os.getenv("GCP_CREDENTIALS_PATH")
 
 if not GCP_RAW_BUCKET:
-    raise ValueError("Airflow Variable 'gcs_raw_bucket' is not set.")
+    raise ValueError("Airflow Variable 'GCP_RAW_BUCKET' is not set.")
 if GCP_CREDENTIALS_PATH and not os.path.exists(GCP_CREDENTIALS_PATH):
     logging.warning(f"GCP_CREDENTIALS_PATH '{GCP_CREDENTIALS_PATH}' not found. "
                     "Ensure correct path or rely on Workload Identity.")
@@ -96,7 +101,7 @@ with DAG(
         "email_on_failure": False,
         "email_on_retry": False,
         "retries": 1,
-        "retry_delay": timedelta(minutes=5),
+        "retry_delay": timedelta(seconds=10),
     }
 ) as dag:
 
@@ -108,6 +113,7 @@ with DAG(
             task_id=task_id,
             python_callable=run_etl_task_callable,
             op_kwargs={"table_name": table_name},
+            doc=f"Extract and load data for the '{table_name}' dimension table from API-Football."
         )
         log.info(f"Created task: {task_id} for table: {table_name}")
 

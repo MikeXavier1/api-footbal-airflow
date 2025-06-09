@@ -1,13 +1,27 @@
 FROM apache/airflow:2.8.1-python3.10
 
-# Set the working directory inside the container
-WORKDIR /opt/airflow
+# Switch to root to install OS-level dependencies
+USER root
 
-# Copy your entire project structure into the image
-COPY . . 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies from requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Switch back to airflow user
+USER airflow
 
-# Set PYTHONPATH to include the root of your project
+# Copy requirements early for layer caching
+COPY requirements.txt /requirements.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r /requirements.txt
+
+# Copy DAGs and source code
+COPY dags/ /opt/airflow/dags/
+COPY src/ /opt/airflow/src/
+
 ENV PYTHONPATH="${PYTHONPATH}:/opt/airflow"
+
+# Set working directory
+WORKDIR /opt/airflow
