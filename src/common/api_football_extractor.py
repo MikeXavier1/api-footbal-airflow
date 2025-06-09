@@ -2,13 +2,7 @@ import requests
 import os
 import logging
 from dotenv import load_dotenv
-from typing import Literal, Dict, Any, List
-
-# Load configs
-load_dotenv(dotenv_path="src/config/.env")
-API_KEY = os.getenv("API_FOOTBALL_KEY")
-API_HOST = os.getenv("API_FOOTBALL_HOST")
-API_URL = os.getenv("URL_PATH")
+from typing import Literal, Dict, Any, List, Optional
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -22,17 +16,34 @@ class APIFootballExtractor:
         "countries": ["name", "code", "search"],
     }
 
-    def __init__(self):
-        if not all ([API_KEY, API_HOST, API_URL]):
-            logger.error("API credentials or URL not loaded. Plese check environment setup.")
+    def __init__(
+        self,
+        env_path: str = "src/config/.env"
+    ):
+        # Load configs
+        load_dotenv(dotenv_path=env_path)
+
+        self.api_key = os.getenv("API_FOOTBALL_KEY")
+        self.api_host = os.getenv("API_FOOTBALL_HOST")
+        self.api_url = os.getenv("URL_PATH")
+
+        if not all ([self.api_key, self.api_host, self.api_url]):
+            logger.error("API credentials or URL not loaded. Please check environment setup.")
             raise ValueError("API credentials or URL are missing.")
-        self.headers = {
-            "x-rapidapi-key": API_KEY,
-            "x-rapidapi-host": API_HOST
-        }
+        
+        self.session = requests.Session()
+        self.session.headers.update({
+            "x-rapidapi-key": self.api_key,
+            "x-rapidapi-host": self.api_host
+        })
+
         logger.info("APIFootballExtractor initialized.")
 
-    def _validate_querystring_params(self, table_name: str, querystring: Dict[str, Any]):
+    def _validate_querystring_params(
+        self,
+        table_name: str,
+        querystring: Dict[str, Any]
+    ) -> None:
         """
         Validates the provided querystring parameters against the allowed ones for the given table.
 
@@ -58,6 +69,7 @@ class APIFootballExtractor:
                 )
                 logger.error(error_msg)
                 raise ValueError(error_msg)
+                
         logger.debug("Querystring parameters validated successfully for table '%s'.", table_name)
 
 
@@ -65,11 +77,11 @@ class APIFootballExtractor:
     def extract_table(
             self,
             table_name: Literal["countries"],
-            **querystring: Dict
+            **querystring: Any
         ) -> Dict[str, Any]:
         
         """
-        Fetch data from a specific table with optional queristrin parameters.
+        Fetch data from a specific table with optional queristring parameters.
 
         Args:
             table_name (Literal): The table name that will be extracted.
@@ -84,16 +96,16 @@ class APIFootballExtractor:
         # Perform validation BEFORE making the request
         self._validate_querystring_params(table_name, querystring)
 
-        url = API_URL + table_name
+        url = f"{self.api_url}{table_name}"
 
         logging.info("Starting fetching data from table %s...", table_name)
 
         try:
-            response = requests.get(url, headers=self.headers, params=querystring)
+            response = self.session.get(url, params=querystring)
 
             logging.info("Full URL requested: %s", response.url)
             response.raise_for_status()
-            logging.info("Fetched data complete for %s!", table_name)
+            logging.info("Data fetched sucessfully for %s!", table_name)
 
             return response.json()
         
@@ -106,12 +118,15 @@ class APIFootballExtractor:
             raise
 
 if __name__ == "__main__":
-    extractor = APIFootballExtractor()
+    logging.getLogger().setLevel(logging.INFO)
+
     try:
+        extractor = APIFootballExtractor()
         TEST_TABLE_NAME = "countries"
         QUERYSTRING = {"search":"bra"}
-        DATA = extractor.extract_table(TEST_TABLE_NAME, **QUERYSTRING)
+
         print("\n--- API Response (first 2 items in 'response' key) ---")
+        DATA = extractor.extract_table(TEST_TABLE_NAME, **QUERYSTRING)
         print(DATA.get("response", [])[:2])
 
         print("\n--- Example without querystring ---")

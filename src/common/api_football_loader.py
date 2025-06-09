@@ -23,6 +23,7 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+logger.debug("Upload modes loaded: %s", UPLOAD_MODES)
 
 class APIFootballLoader:
     """
@@ -153,7 +154,7 @@ class APIFootballLoader:
 
 # --- Test Section ---
 if __name__ == "__main__":           
-    from api_football_transformer import APIFootballTransformer
+    from src.common.api_football_transformer import APIFootballTransformer
 
     if not (GCP_RAW_BUCKET and GCP_CREDENTIALS_PATH):
         logger.error("GCP_RAW_BUCKET or GCP_CREDENTIALS_PATH are not set. "
@@ -196,6 +197,3 @@ if __name__ == "__main__":
 
     except Exception as e:
         logger.critical("An error occurred during the full ETL test: %s", e, exc_info=True)
-
-# Stage parameter
-

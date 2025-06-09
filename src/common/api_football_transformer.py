@@ -1,7 +1,7 @@
 import pandas as pd
 import logging
 from typing import Any, Callable, Dict, Literal, TypeVar
-from api_football_extractor import APIFootballExtractor
+from src.common.api_football_extractor import APIFootballExtractor
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -14,8 +14,6 @@ class APIFootballTransformer:
     """
     Transform fetched data from API Football by table name.
     """
-
-    _TRANSFORM_METHODS: Dict[str, Callable[[T], pd.DataFrame]] = {}
 
     def __init__(
             self,
@@ -71,6 +69,7 @@ class APIFootballTransformer:
         if not self.extracted_data:
             logger.warning("No data available for 'countries' transformation." \
             "Returning empty DataFrame.")
+            return pd.DataFrame()
 
         df = self._convert_to_dataframe(self.extracted_data)
 
@@ -82,7 +81,7 @@ class APIFootballTransformer:
             'name': 'country_name',
             'code': 'country_code',
             'flag': 'country_flag_url'
-        })
+        }).copy()
 
         df['country_name'] = df['country_name'].astype(str).str.strip()
         df['country_code'] = df['country_code'].astype(str).str.upper().str.strip()
@@ -122,12 +121,16 @@ class APIFootballTransformer:
 
 if __name__ == "__main__":
     print("\n--- Testing Countries Transformation ---")
+    
     try:
         countries_transformer = APIFootballTransformer(table_name="countries", search="bra")
         transformed_countries_df = countries_transformer.transform()
+
         print("\nTransformed Countries DataFrame Head:")
         print(transformed_countries_df.head())
+
         print("\nTransformed Countries DataFrame Info:")
         transformed_countries_df.info()
-    except Exception as e:
-        logger.error("Error during countries transformation test: %s", e)
+
+    except Exception as error:
+        logger.error("Error during countries transformation test: %s", error)
