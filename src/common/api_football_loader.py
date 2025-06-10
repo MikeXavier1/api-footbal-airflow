@@ -11,14 +11,14 @@ from typing import Literal
 # Load configs
 load_dotenv(dotenv_path="src/config/.env")
 GCP_RAW_BUCKET = os.getenv("GCP_RAW_BUCKET")
-GCP_CREDENTIALS_PATH = os.getenv("GCP_CREDENTIALS_PATH")
+GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
 # Load upload mode config
 with open("src/config/table_upload_modes.yml", "r") as f:
     UPLOAD_MODES = yaml.safe_load(f)
 
 # Load GCP credentials
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GOOGLE_APPLICATION_CREDENTIALS
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -56,7 +56,7 @@ class APIFootballLoader:
             # Ensure project_id is available from credentials or explicitly set if needed
             self.storage_client = storage.Client(
                 credentials=self.credentials,
-                project=self.credentials.project_id # This should be derived from the creds
+                project=self.credentials.project_id
             )
             self.bucket = self.storage_client.bucket(bucket_name)
             logger.info("APIFootballLoader initialized for bucket '%s'.", bucket_name)
@@ -154,18 +154,18 @@ class APIFootballLoader:
 
 # --- Test Section ---
 if __name__ == "__main__":           
-    from src.common.api_football_transformer import APIFootballTransformer
+    from api_football_transformer import APIFootballTransformer
 
-    if not (GCP_RAW_BUCKET and GCP_CREDENTIALS_PATH):
-        logger.error("GCP_RAW_BUCKET or GCP_CREDENTIALS_PATH are not set. "
+    if not (GCP_RAW_BUCKET and GOOGLE_APPLICATION_CREDENTIALS):
+        logger.error("GCP_RAW_BUCKET or GOOGLE_APPLICATION_CREDENTIALS are not set. "
                      "Please check your src/config/.env file.")
         exit(1)
 
     print("\n--- Testing APIFootballLoader ---")
     try:
         # 1. Initialize the Extractor and Transformer
-        test_table_name = "countries"
-        test_querystring = {"search": None} # Example: Brazil
+        test_table_name = "teams"
+        test_querystring = {"country": "Brazil"} # Example: Brazil
 
         logger.info("Step 1: Extracting and Transforming data...")
         transformer = APIFootballTransformer(table_name=test_table_name, **test_querystring)
@@ -182,7 +182,7 @@ if __name__ == "__main__":
             logger.info("Step 2: Initializing APIFootballLoader...")
             loader = APIFootballLoader(
                 bucket_name=GCP_RAW_BUCKET,
-                credentials_path=GCP_CREDENTIALS_PATH
+                credentials_path=GOOGLE_APPLICATION_CREDENTIALS
             )
 
             # 3. Load the transformed DataFrame

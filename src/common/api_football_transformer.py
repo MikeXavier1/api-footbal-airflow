@@ -90,6 +90,57 @@ class APIFootballTransformer:
         logger.info("Finished transforming 'countries' data. DataFrame shape: %s", df.shape)
 
         return df
+
+    def transform_teams(self) -> pd.DataFrame:
+        """
+        Transformation logic for 'teams' table data.
+        """
+
+        logger.info("Starting transformation for 'teams' table.")
+
+        if not self.extracted_data:
+            logger.warning("No data available for 'teams' transformation." \
+            "Returning empty DataFrame.")
+            return pd.DataFrame()
+
+        teams = self.extracted_data
+
+        if len(teams) == 0:
+            logger.warning("DataFrame is empty after initial conversion for 'teams'.")
+            return pd.DataFrame()
+
+        records = []
+
+        for team in teams:
+            team_id = team["team"]["id"]
+            venue_id = team["venue"]["id"]
+            team_name = team["team"]["name"]
+            team_founded = team["team"]["founded"]
+            is_national = team["team"]["national"]
+            team_logo = team["team"]["logo"]
+
+            record = {
+                'team_id': team_id,
+                'venue_id': venue_id,
+                'team_name': team_name,
+                'team_founded': team_founded,
+                'is_national': is_national,
+                'team_logo': team_logo,
+            }
+
+            records.append(record)
+
+        df = self._convert_to_dataframe(records)
+
+        df['team_id'] = df['team_id'].astype(str).str.strip()
+        df['venue_id'] = df['venue_id'].astype(str).str.strip()
+        df['team_name'] = df['team_name'].astype(str).str.strip()
+        df['team_founded'] = df['team_founded'].astype(str).str.strip()
+        df['is_national'] = df['is_national'].astype(str).str.strip()
+        df['team_logo'] = df['team_logo'].astype(str).str.strip()
+
+        return df
+
     
     def transform(self) -> pd.DataFrame:
         """
@@ -120,17 +171,17 @@ class APIFootballTransformer:
 # --- Test ---
 
 if __name__ == "__main__":
-    print("\n--- Testing Countries Transformation ---")
+    print("\n--- Testing Teams Transformation ---")
     
     try:
-        countries_transformer = APIFootballTransformer(table_name="countries", search="bra")
-        transformed_countries_df = countries_transformer.transform()
+        teams_transformer = APIFootballTransformer(table_name="teams", country="Brazil")
+        transformed_teams_df = teams_transformer.transform()
 
-        print("\nTransformed Countries DataFrame Head:")
-        print(transformed_countries_df.head())
+        print("\nTransformed Teams DataFrame Head:")
+        print(transformed_teams_df.head())
 
-        print("\nTransformed Countries DataFrame Info:")
-        transformed_countries_df.info()
+        print("\nTransformed Teams DataFrame Info:")
+        transformed_teams_df.info()
 
     except Exception as error:
-        logger.error("Error during countries transformation test: %s", error)
+        logger.error("Error during teams transformation test: %s", error)
