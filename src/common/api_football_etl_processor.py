@@ -40,7 +40,7 @@ except Exception as e:
 
 # Load config variables
 GCP_RAW_BUCKET = os.getenv("GCP_RAW_BUCKET")
-GCP_CREDENTIALS_PATH = os.getenv("GCP_CREDENTIALS_PATH")
+GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
 # Load table upload strategies
 UPLOAD_MODES: Dict[str, str] = {}
@@ -76,8 +76,8 @@ class ETLProcessor:
             logger.critical("Missing GCP_RAW_BUCKET.")
             raise ValueError("GCP_RAW_BUCKET is not configured.")
         if not self.credentials_path or not os.path.exists(self.credentials_path):
-            logger.critical(f"Invalid GCP_CREDENTIALS_PATH: {self.credentials_path}")
-            raise ValueError("GCP_CREDENTIALS_PATH is not configured or path is invalid.")
+            logger.critical(f"Invalid GOOGLE_APPLICATION_CREDENTIALS: {self.credentials_path}")
+            raise ValueError("GOOGLE_APPLICATION_CREDENTIALS is not configured or path is invalid.")
         if not UPLOAD_MODES:
             logger.critical("UPLOAD_MODES is empty or not loaded.")
             raise ValueError("UPLOAD_MODES is missing.")
@@ -186,17 +186,17 @@ if __name__ == "__main__":
 
     # Ensure config vars are loaded for local testing
     GCP_RAW_BUCKET_TEST = os.getenv("GCP_RAW_BUCKET")
-    GCP_CREDENTIALS_PATH_TEST = os.getenv("GCP_CREDENTIALS_PATH")
+    GOOGLE_APPLICATION_CREDENTIALS_TEST = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
-    if not (GCP_RAW_BUCKET_TEST and GCP_CREDENTIALS_PATH_TEST and os.path.exists(str(GCP_CREDENTIALS_PATH_TEST) if GCP_CREDENTIALS_PATH_TEST else '')):
-        logger.error("GCP_RAW_BUCKET or GCP_CREDENTIALS_PATH not set for local testing. Skipping tests.")
+    if not (GCP_RAW_BUCKET_TEST and GOOGLE_APPLICATION_CREDENTIALS_TEST and os.path.exists(str(GOOGLE_APPLICATION_CREDENTIALS_TEST) if GOOGLE_APPLICATION_CREDENTIALS_TEST else '')):
+        logger.error("GCP_RAW_BUCKET or GOOGLE_APPLICATION_CREDENTIALS not set for local testing. Skipping tests.")
         exit(1) # Exit if configuration is missing for tests
 
     # Initialize the ETL Processor instance
     try:
         etl_processor = ETLProcessor(
             bucket_name=GCP_RAW_BUCKET_TEST,
-            credentials_path=GCP_CREDENTIALS_PATH_TEST
+            credentials_path=GOOGLE_APPLICATION_CREDENTIALS_TEST
         )
     except Exception as e:
         logger.critical(f"Failed to initialize ETLProcessor: {e}. Exiting tests.")

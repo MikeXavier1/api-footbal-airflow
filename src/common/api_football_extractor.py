@@ -14,6 +14,7 @@ class APIFootballExtractor:
     """
     _ALLOWED_QUERY_PARAMS: Dict[str, List[str]] = {
         "countries": ["name", "code", "search"],
+        "teams": ["id", "name", "league", "season", "country", "search", "code", "venue"]
     }
 
     def __init__(
@@ -76,7 +77,7 @@ class APIFootballExtractor:
 
     def extract_table(
             self,
-            table_name: Literal["countries"],
+            table_name: Literal["countries", "teams"],
             **querystring: Any
         ) -> Dict[str, Any]:
         
@@ -122,8 +123,8 @@ if __name__ == "__main__":
 
     try:
         extractor = APIFootballExtractor()
-        TEST_TABLE_NAME = "countries"
-        QUERYSTRING = {"search":"bra"}
+        TEST_TABLE_NAME = "teams"
+        QUERYSTRING = {"country":"Brazil"}
 
         print("\n--- API Response (first 2 items in 'response' key) ---")
         DATA = extractor.extract_table(TEST_TABLE_NAME, **QUERYSTRING)
