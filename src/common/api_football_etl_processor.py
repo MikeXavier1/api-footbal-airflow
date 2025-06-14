@@ -203,9 +203,9 @@ if __name__ == "__main__":
         exit(1)
 
     # --- Test 1: ETL for 'countries' (should use 'overwrite' from YAML) ---
-    logger.info("\n--- Test 1: Running ETL for 'countries' (mode from YAML) ---")
+    logger.info("\n--- Test 1: Running ETL for 'league/season' (mode from YAML) ---")
     try:
-        table_name_countries = "countries"
+        table_name_countries = "leagues/seasons"
         stage_raw = "raw"
         querystring_countries = {} # No specific search for full countries list
 

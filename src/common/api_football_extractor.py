@@ -14,7 +14,9 @@ class APIFootballExtractor:
     """
     _ALLOWED_QUERY_PARAMS: Dict[str, List[str]] = {
         "countries": ["name", "code", "search"],
-        "teams": ["id", "name", "league", "season", "country", "search", "code", "venue"]
+        "teams": ["id", "name", "league", "season", "country", "search", "code", "venue"],
+        "leagues": ["id", "name", "country",  "code", "venue", "season", "team", "type", "current", "search", "last"],
+        "leagues/seasons": []
     }
 
     def __init__(
@@ -77,7 +79,7 @@ class APIFootballExtractor:
 
     def extract_table(
             self,
-            table_name: Literal["countries", "teams"],
+            table_name: Literal["countries", "teams", "leagues", "leagues/seasons"],
             **querystring: Any
         ) -> Dict[str, Any]:
         
@@ -123,16 +125,16 @@ if __name__ == "__main__":
 
     try:
         extractor = APIFootballExtractor()
-        TEST_TABLE_NAME = "teams"
-        QUERYSTRING = {"country":"Brazil"}
+        TEST_TABLE_NAME = "leagues/seasons"
+        QUERYSTRING = {}
 
         print("\n--- API Response (first 2 items in 'response' key) ---")
         DATA = extractor.extract_table(TEST_TABLE_NAME, **QUERYSTRING)
         print(DATA.get("response", [])[:2])
 
         print("\n--- Example without querystring ---")
-        countries_all_data = extractor.extract_table(table_name="countries")
-        print(countries_all_data.get("response", [])[:2])
+        seasons_all_data = extractor.extract_table(table_name="leagues/seasons")
+        print(seasons_all_data.get("response", [])[:2])
 
     except Exception as e:
         logger.error("An error occurred during extraction test: %s", e)

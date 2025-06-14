@@ -62,11 +62,6 @@ services:
       - ./src:/opt/airflow/src
       - ./logs:/opt/airflow/logs
     command: airflow scheduler
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
 
 volumes:
   postgres_data:

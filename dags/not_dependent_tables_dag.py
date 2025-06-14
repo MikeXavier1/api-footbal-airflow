@@ -1,6 +1,7 @@
 """
 This DAG runs on-demand ETL jobs to extract and load raw dimension tables from the API-Football service into GCP.
 It uses a dynamic task creation mechanism based on a YAML configuration (table_upload_modes.yml).
+Tables included: 'countries', 'leagues/seasons'
 """
 
 from __future__ import annotations
@@ -90,7 +91,7 @@ def run_etl_task_callable(table_name: str, **kwargs):
 # --- DAG Definition ---
 
 with DAG(
-    dag_id="api_football_on_demand_etl",
+    dag_id="not_dependent_tables_dag",
     start_date=pendulum.datetime(2025, 6, 5, tz="UTC"),
     schedule=None,
     catchup=False,
@@ -108,8 +109,9 @@ with DAG(
     # Dynamically create tasks based on UPLOAD_MODES from the YAML file
     tasks = {}
     for table_name in UPLOAD_MODES.keys():
-        if table_name == "countries":
-            task_id = f"extract_load_{table_name}"
+        if table_name in ["countries", "leagues/seasons"]:
+            sanitized_table_name = table_name.replace("/", "_")
+            task_id = f"extract_load_{sanitized_table_name}"
             tasks[table_name] = PythonOperator(
                 task_id=task_id,
                 python_callable=run_etl_task_callable,

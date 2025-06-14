@@ -1,5 +1,5 @@
 """
-This DAG runs ETL jobs to extract and load raw 'teams' data from the API-Football service into GCP.
+This DAG runs ETL jobs to extract and load raw table data that has country as parameter from the API-Football service into GCP.
 It dynamically fetches country names from BigQuery to drive the extraction.
 """
 
@@ -111,7 +111,7 @@ def run_etl_task_callable(
 # --- DAG Definition ---
 
 with DAG(
-    dag_id="api_football_teams_etl",
+    dag_id="country_dependency_tables",
     start_date=pendulum.datetime(2025, 6, 5, tz="UTC"),
     schedule=None,
     catchup=False,
@@ -141,19 +141,23 @@ with DAG(
         )
         return countries
 
-    list_of_countries = _fetch_countries_task()
+    @task
+    def extract_load_teams(country: str):
+        run_etl_task_callable(
+            table_name="teams",
+            querystring_params={"country": country}
+        )
+    
+    @task
+    def extract_load_leagues(country: str):
+        run_etl_task_callable(
+            table_name="leagues",
+            querystring_params={"country": country}
+        )
+    
+    countries = _fetch_countries_task()
 
-    # Dynamically map 'teams' ETL task for each country
-    extract_load_teams_tasks = PythonOperator.partial(
-        task_id="extract_load_teams",
-        python_callable=run_etl_task_callable,
-        doc="Extract and load data for the 'teams' dimension table from API-Football for a specific country."
-    ).expand(
-        op_kwargs=list_of_countries.map(lambda country: {
-            "table_name": "teams",
-            "querystring_params": {"country": country}
-        })
-    )
+    teams = extract_load_teams.expand(country=countries)
+    leagues = extract_load_leagues.expand(country=countries)
 
-    # Set dependency: 'teams' ETL tasks depend on 'fetch_countries_from_bq'
-    list_of_countries >> extract_load_teams_tasks
+    countries >> [teams, leagues]

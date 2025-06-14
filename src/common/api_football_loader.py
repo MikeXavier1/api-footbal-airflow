@@ -14,7 +14,8 @@ GCP_RAW_BUCKET = os.getenv("GCP_RAW_BUCKET")
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
 # Load upload mode config
-with open("src/config/table_upload_modes.yml", "r") as f:
+config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'table_upload_modes.yml')
+with open(config_path, "r") as f:
     UPLOAD_MODES = yaml.safe_load(f)
 
 # Load GCP credentials
@@ -107,6 +108,8 @@ class APIFootballLoader:
 
         temp_file_name = f"{table_name}_{now_timestamp}.parquet"
         temp_path = os.path.join('/tmp', temp_file_name)
+
+        os.makedirs(os.path.dirname(temp_path), exist_ok=True)
 
         try:
             if mode == "overwrite":
