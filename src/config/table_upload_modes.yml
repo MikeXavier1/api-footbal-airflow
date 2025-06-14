@@ -1,2 +1,4 @@
 countries: overwrite
 teams: overwrite
+leagues: overwrite
+leagues/seasons: overwrite

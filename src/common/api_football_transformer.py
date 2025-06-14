@@ -17,7 +17,7 @@ class APIFootballTransformer:
 
     def __init__(
             self,
-            table_name:Literal["countries"],
+            table_name:Literal["countries", "teams", "leagues", "leagues/season"],
             **querystring: Dict[str, Any]
         ):
         """
@@ -58,6 +58,16 @@ class APIFootballTransformer:
             logger.warning("Data is not a list of dictionaries or a single dictionary for" \
             " DataFrame conversion. Type: %s", type(data))
             return pd.DataFrame()
+    
+    @staticmethod
+    def clean_float_value(value):
+        try:
+            value = float(str(value).strip())
+            if np.isfinite(value):
+                return int(value)
+        except:
+            pass
+        return pd.NA
 
     def transform_countries(self) -> pd.DataFrame:
         """
@@ -133,14 +143,86 @@ class APIFootballTransformer:
         df = self._convert_to_dataframe(records)
 
         df['team_id'] = df['team_id'].astype(str).str.strip()
-        df['venue_id'] = df['venue_id'].astype(str).str.strip()
+        df['venue_id'] = df['venue_id'].astype(str).str.strip().apply(self.clean_float_value).astype('Int64')
         df['team_name'] = df['team_name'].astype(str).str.strip()
-        df['team_founded'] = df['team_founded'].astype(str).str.strip()
+        df['team_founded'] = df['team_founded'].astype(str).str.strip().apply(self.clean_float_value).astype('Int64')
         df['is_national'] = df['is_national'].astype(str).str.strip()
         df['team_logo'] = df['team_logo'].astype(str).str.strip()
 
         return df
 
+    def transform_leagues(self) -> pd.DataFrame:
+        """
+        Transformation logic for 'leagues' table data.
+        """
+
+        logger.info("Starting transformation for 'leagues' table.")
+
+        if not self.extracted_data:
+            logger.warning("No data available for 'leagues' transformation." \
+            "Returning empty DataFrame.")
+            return pd.DataFrame()
+
+        leagues = self.extracted_data
+
+        if len(leagues) == 0:
+            logger.warning("DataFrame is empty after initial conversion for 'leagues'.")
+            return pd.DataFrame()
+
+        records = []
+
+        for league in leagues:
+            league_id = league["league"]["id"]
+            league_name = league["league"]["name"]
+            league_type = league["league"]["type"]
+            league_logo = league["league"]["logo"]
+            country_code = league["country"]["code"]
+
+            record = {
+                'league_id': league_id,
+                'league_name': league_name,
+                'league_type': league_type,
+                'league_logo': league_logo,
+                'country_code': country_code
+            }
+
+            records.append(record)
+
+        df = self._convert_to_dataframe(records)
+
+        df['league_id'] = df['league_id'].astype(str).str.strip()
+        df['league_name'] = df['league_name'].astype(str).str.strip()
+        df['league_type'] = df['league_type'].astype(str).str.strip()
+        df['league_logo'] = df['league_logo'].astype(str).str.strip()
+        df['country_code'] = df['country_code'].astype(str).str.strip()
+
+        return df
+
+    def transform_leagues_seasons(self) -> pd.DataFrame:
+        """
+        Transformation logic for 'leagues' table data.
+        """
+
+        logger.info("Starting transformation for 'leagues/seasons' table.")
+
+        if not self.extracted_data:
+            logger.warning("No data available for 'leagues/seasons' transformation." \
+            "Returning empty DataFrame.")
+            return pd.DataFrame()
+
+        seasons = self.extracted_data
+
+        records = [{'season': s} for s in seasons]
+
+        if len(records) == 0:
+            logger.warning("DataFrame is empty after initial conversion for 'leagues/season'.")
+            return pd.DataFrame()
+
+        df = self._convert_to_dataframe(records)
+        
+        df['season'] = df['season'].astype('Int64')
+
+        return df
     
     def transform(self) -> pd.DataFrame:
         """
@@ -154,7 +236,7 @@ class APIFootballTransformer:
             ValueError: If no specific transformation method is found for the given table_name.
         """
         # A more dynamic way to map methods using getattr
-        method_name = f"transform_{self.table_name}"
+        method_name = f"transform_{self.table_name.replace('/', '_')}"
         transformer_method = getattr(self, method_name, None)
 
         if transformer_method is None or not callable(transformer_method):
@@ -171,17 +253,17 @@ class APIFootballTransformer:
 # --- Test ---
 
 if __name__ == "__main__":
-    print("\n--- Testing Teams Transformation ---")
+    print("\n--- Testing seasons Transformation ---")
     
     try:
-        teams_transformer = APIFootballTransformer(table_name="teams", country="Brazil")
+        teams_transformer = APIFootballTransformer(table_name="leagues/seasons",)
         transformed_teams_df = teams_transformer.transform()
 
-        print("\nTransformed Teams DataFrame Head:")
+        print("\nTransformed seasons DataFrame Head:")
         print(transformed_teams_df.head())
 
-        print("\nTransformed Teams DataFrame Info:")
+        print("\nTransformed seasons DataFrame Info:")
         transformed_teams_df.info()
 
     except Exception as error:
-        logger.error("Error during teams transformation test: %s", error)
+        logger.error("Error during seasons transformation test: %s", error)
