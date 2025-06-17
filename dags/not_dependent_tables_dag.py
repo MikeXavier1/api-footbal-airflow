@@ -63,10 +63,12 @@ def run_etl_task_callable(table_name: str, **kwargs):
     log.info(f"Starting ETL task for table: {table_name}")
 
     # Initialize ETLProcessor *inside* the task callable for robustness
+    if not GCP_RAW_BUCKET:
+        raise ValueError("GCP_RAW_BUCKET environment variable must be set and not None.")
     try:
         etl_processor = ETLProcessor(
             bucket_name=GCP_RAW_BUCKET,
-            credentials_path=GOOGLE_APPLICATION_CREDENTIALS
+            credentials_path=GOOGLE_APPLICATION_CREDENTIALS or ""
         )
     except Exception as error:
         log.critical(
@@ -77,8 +79,10 @@ def run_etl_task_callable(table_name: str, **kwargs):
     querystring_params: Dict[str, Any] = {}
     
     try:
+        from typing import cast, Literal
+        literal_table_name = cast(Literal['countries', 'teams', 'leagues', 'leagues/seasons'], table_name)
         gcs_path = etl_processor.run_etl_for_table(
-            table_name=table_name,
+            table_name=literal_table_name,
             stage="raw",
             querystring_params=querystring_params,
             **kwargs

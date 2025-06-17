@@ -35,10 +35,13 @@ class APIFootballExtractor:
             raise ValueError("API credentials or URL are missing.")
         
         self.session = requests.Session()
-        self.session.headers.update({
-            "x-rapidapi-key": self.api_key,
-            "x-rapidapi-host": self.api_host
-        })
+        headers = {}
+        if self.api_key is not None:
+            headers["x-rapidapi-key"] = self.api_key
+        if self.api_host is not None:
+            headers["x-rapidapi-host"] = self.api_host
+        if headers:
+            self.session.headers.update(headers)
 
         logger.info("APIFootballExtractor initialized.")
 

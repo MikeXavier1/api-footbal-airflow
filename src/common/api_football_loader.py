@@ -18,13 +18,16 @@ config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'table_upl
 with open(config_path, "r") as f:
     UPLOAD_MODES = yaml.safe_load(f)
 
-# Load GCP credentials
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GOOGLE_APPLICATION_CREDENTIALS
-
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 logger.debug("Upload modes loaded: %s", UPLOAD_MODES)
+
+# Load GCP credentials
+if GOOGLE_APPLICATION_CREDENTIALS is not None:
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GOOGLE_APPLICATION_CREDENTIALS
+else:
+    logger.warning("GOOGLE_APPLICATION_CREDENTIALS is not set. Please check your src/config/.env file.")
 
 class APIFootballLoader:
     """
@@ -69,7 +72,7 @@ class APIFootballLoader:
             self,
             table_name: str,
             df: pd.DataFrame,
-            stage: Literal["raw"]
+            stage: Literal["raw", "processed"]
     ):
         """
         Loads a Pandas DataFrame into a Parquet file in GCS.
@@ -171,7 +174,7 @@ if __name__ == "__main__":
         test_querystring = {"country": "Brazil"} # Example: Brazil
 
         logger.info("Step 1: Extracting and Transforming data...")
-        transformer = APIFootballTransformer(table_name=test_table_name, **test_querystring)
+        transformer = APIFootballTransformer(table_name=test_table_name, querystring=test_querystring)
         transformed_df = transformer.transform()
 
         if transformed_df.empty:
