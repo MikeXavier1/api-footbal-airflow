@@ -70,8 +70,10 @@ except Exception as e:
 
 
 # --- Python Callable for ETL Task ---
+from typing import Literal
+
 def run_etl_task_callable(
-        table_name: str,
+        table_name: Literal['countries', 'teams', 'leagues', 'leagues/seasons'],
         querystring_params: Optional[Dict[str, Any]] = None,
         **kwargs
 ):
@@ -85,6 +87,10 @@ def run_etl_task_callable(
     if querystring_params is None:
         querystring_params = {}
 
+    if GCP_RAW_BUCKET is None:
+        raise ValueError("GCP_RAW_BUCKET must not be None when initializing ETLProcessor.")
+    if GOOGLE_APPLICATION_CREDENTIALS is None:
+        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS must not be None when initializing ETLProcessor.")
     try:
         etl_processor = ETLProcessor(
             bucket_name=GCP_RAW_BUCKET,
@@ -133,6 +139,10 @@ with DAG(
         Fetches a list of countries from the BigQuery dim_countries table
         using the dedicated helper function in gcp_utils.
         """
+        if GCP_PROJECT_ID is None:
+            raise ValueError(
+                "GCP_PROJECT_ID must not be None when fetching countries from BigQuery."
+            )
         countries = get_from_bigquery(
             project_id=GCP_PROJECT_ID,
             dataset_id="api_football", 

@@ -1,8 +1,7 @@
 import logging
 import os
 import yaml
-from typing import Literal, Dict, Any, Optional
-from datetime import datetime, timedelta, timezone
+from typing import Literal, Dict, Any, Optional, cast
 
 try:
     from src.common.api_football_transformer import APIFootballTransformer
@@ -85,7 +84,7 @@ class ETLProcessor:
 
     def _perform_core_etl_steps(
         self,
-        table_name: str,
+        table_name: Literal['countries', 'teams', 'leagues', 'leagues/seasons'],
         stage: Literal["raw", "processed"],
         load_strategy: Literal["overwrite", "append"],
         querystring_params: Dict[str, Any],
@@ -102,10 +101,6 @@ class ETLProcessor:
             logger.info(f"Transformed {len(transformed_df)} records for table '{table_name}'.")
         except Exception as error:
             logger.critical(f"Transformation error for '{table_name}': {error}", exc_info=True)
-            raise
-
-        except Exception as error:
-            logger.critical(f"Error during Extraction or Transformation for table '{table_name}': {error}", exc_info=True)
             raise
 
         if transformed_df.empty:
@@ -149,7 +144,7 @@ class ETLProcessor:
 
     def run_etl_for_table(
         self,
-        table_name: str,
+        table_name: Literal['countries', 'teams', 'leagues', 'leagues/seasons'],
         stage: Literal["raw", "processed"],
         querystring_params: Dict[str, Any],
         **context: Any
@@ -175,7 +170,7 @@ class ETLProcessor:
         return self._perform_core_etl_steps(
             table_name=table_name,
             stage=stage,
-            load_strategy=load_strategy,
+            load_strategy=cast(Literal["overwrite", "append"], load_strategy),
             querystring_params=querystring_params,
             **context
         )
@@ -205,7 +200,7 @@ if __name__ == "__main__":
     # --- Test 1: ETL for 'countries' (should use 'overwrite' from YAML) ---
     logger.info("\n--- Test 1: Running ETL for 'league/season' (mode from YAML) ---")
     try:
-        table_name_countries = "leagues/seasons"
+        table_name_countries: Literal['countries', 'teams', 'leagues', 'leagues/seasons'] = "leagues/seasons"
         stage_raw = "raw"
         querystring_countries = {} # No specific search for full countries list
 

@@ -2,6 +2,7 @@ import pandas as pd
 import logging
 from typing import Any, Callable, Dict, Literal, TypeVar
 from src.common.api_football_extractor import APIFootballExtractor
+import numpy as np
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -17,7 +18,7 @@ class APIFootballTransformer:
 
     def __init__(
             self,
-            table_name:Literal["countries", "teams", "leagues", "leagues/season"],
+            table_name:Literal["countries", "teams", "leagues", "leagues/seasons"],
             **querystring: Dict[str, Any]
         ):
         """
@@ -248,7 +249,11 @@ class APIFootballTransformer:
             )
 
         logger.info("Dispatching to transformation method: '%s'", method_name)
-        return transformer_method()
+        result = transformer_method()
+        if not isinstance(result, pd.DataFrame):
+            logger.error("Transformation method '%s' did not return a pandas DataFrame.", method_name)
+            raise TypeError(f"Transformation method '{method_name}' did not return a pandas DataFrame.")
+        return result
 
 # --- Test ---
 
